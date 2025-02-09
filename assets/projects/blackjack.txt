@@ -1,0 +1,430 @@
+// Name: Cooper MacDonald
+// Date: December 12, 2023
+// App Name: Blackjack
+// Description: App that allows players to enter their and the dealer's black jack hand calculating the winner and can save who is winning the game and load up who the overrall Winner is. 
+
+import javax.swing.*;
+import java.awt.*;
+import java.io.File;
+import java.io.FileWriter;
+import java.util.Arrays;
+import java.util.Scanner;
+import java.util.List;
+
+public class Blackjack {
+    Scanner scanner = new Scanner(System.in);
+
+    // Components (aka widgets, controls)
+    static JFrame window;
+    static JPanel panel;
+    static JLabel playerNameLabel, playerCardsLabel, dealerCardsLabel, winnerLabel, playerHandLabel, dealerHandLabel, highScoreLabel;
+    static JTextField playerNameTextField, playerCardsTextField, dealerCardsTextField, playerHandTextField, dealerHandTextField, winnerTextField, highScoreTextField;
+    static JSpinner levelSpinner;
+    static JButton calculateWinnerButton, saveButton, loadButton;
+    static GridBagConstraints gridBag;
+
+    /**
+     * Validates that the user input for cards making sure its 1-10 | AKQJ
+     * @param inputtedCards Will eventually pass the player and dealer cards as user inputted cards
+     * @return
+     */
+    static boolean areCardsValid(String inputtedCards) {
+        // Define acceptable user input for cards
+        List<String> validCards = Arrays.asList("2", "3", "4", "5", "6,", "7", "8", "9", "10", "J", "Q", "K", "A");
+
+        // Split the inputted cards formatting with \\s+ to store in an array of cards
+        String[] cards = inputtedCards.trim().split("\\s+");
+
+        // Check the cards ensuring they match valid entry
+        for (String card : cards) {
+            if (!validCards.contains(card)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Assigns numeric values to inputted cards
+     * @param inputtedCards Will eventually pass the player and dealer cards as user inputted cards
+     * @return
+     */
+    static int getCardValue(String inputtedCards) {
+        // Determine the numeric value of the card
+        switch
+         (inputtedCards) {
+            case "2":
+            case "3":
+            case "4":
+            case "5":
+            case "6":
+            case "7":
+            case "8":
+            case "9":
+            case "10":
+                return Integer.parseInt(inputtedCards);
+            case "J":
+            case "Q":
+            case "K":
+                return 10;
+            case "A":
+                return 11; // Treating Ace as always 11 for simplicity
+            default:
+                return 0; // Default should not happen
+        }
+
+    }
+
+    /**
+     * Calculates the value of the hand - Hand Total (adds the card values together)
+     * @param inputtedCards Will eventually pass the player and dealer cards as user inputted cards
+     * @return
+     */
+    static int calculateHandValue(String inputtedCards) {
+        int handValue = 0;
+
+        // Split the inputted cards formatting with \\s+ to store in an array of cards
+        String[] cards = inputtedCards.trim().split("\\s+");
+
+        for (String card : cards) {
+            handValue += getCardValue(card);
+        }
+
+        return handValue;
+    }
+
+    /**
+     * Handles the event of what happens when the user clicks calculate optimal move
+     * Validates user input, calculates their hand value and calls determine winner
+     */
+    static void calculateWinnerClick() {
+        String playerCards = playerCardsTextField.getText();
+        String dealerCards = dealerCardsTextField.getText();
+        String playerName = playerNameTextField.getText();
+
+        // Error handling for an empty player name
+        if (playerName.isEmpty()) {
+            JOptionPane.showMessageDialog(window, "Player name cannot be left empty!", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        // Display error message for invalid card entry
+        if (!areCardsValid(playerCards) || !areCardsValid(dealerCards)) {
+            JOptionPane.showMessageDialog(window, "Invalid card entry!", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        // Hand values
+        int playerHandValue = calculateHandValue(playerCards);
+        int dealerHandValue = calculateHandValue(dealerCards);
+
+        // Display hand total in their hand text fields
+        playerHandTextField.setText("Hand Total: " + playerHandValue);
+        dealerHandTextField.setText("Hand Total: " + dealerHandValue);
+
+        determineWinner(playerName, playerHandValue, dealerHandValue);
+    }
+
+    /**
+     * This compares the player and dealers hand to obtain the winner using Blackjack logic
+     * @param playerName From the users input of their name 
+     * @param playerHandValue The players hand total
+     * @param dealerHandValue The dealers hand total
+     * @return
+     */
+    static boolean determineWinner(String playerName, int playerHandValue, int dealerHandValue) {
+        if (playerHandValue > 21 || (dealerHandValue <= 21 && dealerHandValue >= playerHandValue)) {
+            winnerTextField.setText(playerName + " loses!");
+            return false;
+        } else if (dealerHandValue > 21 || playerHandValue > dealerHandValue) {
+            winnerTextField.setText(playerName + " wins!");
+            return true;
+        } else {
+            // Player and Dealer draw so Player Lose
+            winnerTextField.setText(playerName + " loses!");
+            return false;
+        }
+    }
+
+    /**
+     * Handles the save click event logic saving the wins and losses of the player to an external file
+     */
+    static void saveClick() {
+        // Variables
+        String playerName = playerNameTextField.getText();
+        boolean playerWon = winnerTextField.getText().contains("wins");
+        File file;
+        String fileName;
+        FileWriter fileWriter;
+
+        fileName = playerName.split(" ")[0] +".text";
+        file = new File(fileName);
+
+        try {
+            // FileWriter with true as the second parameter enables append mode
+            fileWriter = new FileWriter(file, true);
+
+            // Write the player's result in the file
+            fileWriter.write(playerWon ? "Win" : "Lose");
+            // Add a newline for better readability
+            fileWriter.write(System.lineSeparator());  
+
+            // Close the file
+            fileWriter.close();
+
+            // Tell the user we saved the file successfully
+            JOptionPane.showMessageDialog(window, "Result saved in file: " + fileName);
+
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(window, "Cannot write on this file!", "Error!", JOptionPane.ERROR_MESSAGE);
+        }
+
+        // Reset the form 
+        playerCardsTextField.setText("");
+        dealerCardsTextField.setText("");
+        playerHandTextField.setText("");
+        dealerHandTextField.setText("");
+        winnerTextField.setText("");
+        highScoreTextField.setText("");
+    }
+
+    /**
+     * Handles the load click event logic
+     */
+    static void loadClick() 
+    {
+        // Variables 
+        File file = null;
+        Scanner fileScanner;
+        String playerName = "";
+
+        JFileChooser fileChooser = new JFileChooser(".");
+
+        // Show the file chooser
+        // Wait until the user clicks [open]
+        if (fileChooser.showOpenDialog(window) == JFileChooser.APPROVE_OPTION) {
+            // Open the selected file
+            file = fileChooser.getSelectedFile();
+        }
+
+        try {
+            // Open the file
+            fileScanner = new Scanner(file);
+
+            // Get the player's name 
+            playerName = file.getName();
+            // Remove the file extension._____ 
+            playerName = playerName.substring(0, playerName.lastIndexOf('.')); 
+
+            // Count wins and losses
+            int wins = 0;
+            int losses = 0;
+
+            while (fileScanner.hasNextLine())
+            {
+                String result = fileScanner.nextLine();
+                if ("Win".equalsIgnoreCase(result)){
+                    wins++;
+                }
+                else if ("Lose".equalsIgnoreCase(result)){
+                    losses++;
+                }
+            }
+
+            // Finished reading the file close it
+            fileScanner.close();
+
+            // Update playerName on  GUI
+            playerNameTextField.setText(playerName);
+
+            // Determine if the player has more wins or losses
+            if (wins > losses) {
+                highScoreTextField.setText(playerName);
+            } else if (losses > wins) {
+                highScoreTextField.setText("Dealer");
+            } else {
+                highScoreTextField.setText("Draw");
+            }
+
+
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(window, "Error reading file", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+    }
+    public static void main(String[] args) {
+
+        // Change the GUI to look like the native OS - Microsoft
+        try {
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+        } catch (Exception e) {
+        }
+        ;
+
+        // Setup the window
+        window = new JFrame("Blackjack - Cooper MacDonald");
+        window.setIconImage(new ImageIcon("AJ.png").getImage());
+
+        // Close the window when clicking the x and set resizable to false
+        window.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+        window.setResizable(false);
+
+        // Panel - we place other widgets HERE
+        panel = new JPanel();
+        // Add a layout to the panel
+        panel.setLayout(new GridBagLayout());
+        panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        gridBag = new GridBagConstraints();
+
+        // Label - allows us to write stuff on screen
+        playerNameLabel = new JLabel("Player name:");
+        playerCardsLabel = new JLabel("Player cards:");
+        dealerCardsLabel = new JLabel("Dealer cards:");
+        playerHandLabel = new JLabel("Player hand:");
+        dealerHandLabel = new JLabel("Dealer hand:");
+        winnerLabel = new JLabel("Winner of hand:");
+        highScoreLabel = new JLabel("Overall Winner:");
+
+        // Text Fields - to enter cards
+        playerNameTextField = new JTextField(20);
+        playerCardsTextField = new JTextField(20);
+        dealerCardsTextField = new JTextField(20);
+        playerHandTextField = new JTextField(20);
+        playerHandTextField.setEditable(false);
+        dealerHandTextField = new JTextField(20);
+        dealerHandTextField.setEditable(false);
+        winnerTextField = new JTextField(10);
+        winnerTextField.setEditable(false);
+        highScoreTextField = new JTextField(10);
+        highScoreTextField.setEditable(false);
+
+        // Buttons - Call a method when clicked
+        calculateWinnerButton = new JButton("Calculate Winner");
+        saveButton = new JButton("Save");
+        loadButton = new JButton("Load");
+
+        // Add tooltips to components
+        playerNameTextField.setToolTipText("Enter your name");
+        playerCardsTextField.setToolTipText("Enter your cards (e.g., [1-10 AKQJ] )");
+        dealerCardsTextField.setToolTipText("Enter dealer's cards (e.g., [1-10 AKQJ])");
+        calculateWinnerButton.setToolTipText("Click to calculate the winner of the hand.");
+        saveButton.setToolTipText("Click to save the hand result to an external file.");
+        loadButton.setToolTipText("Click to load up a players history and determine overall winner.");
+
+        // Executes a method when clicking the load button
+        loadButton.addActionListener(event -> loadClick());
+        saveButton.addActionListener(event -> saveClick());
+        calculateWinnerButton.addActionListener(event -> calculateWinnerClick());
+
+        // Place the components
+        window.add(panel);
+
+        // Header Image ----------------------------------------------------------
+        gridBag.gridy = 0;
+        gridBag.gridx = 1; // Set the column to place the image in the middle
+        gridBag.gridwidth = 2; // Span across 2 columns
+        gridBag.anchor = GridBagConstraints.CENTER;
+
+        // Load the original image
+        ImageIcon originalTitleIcon = new ImageIcon("blackjack.png");
+        Image originalTitleImage = originalTitleIcon.getImage();
+
+        // Resize the image
+        int newWidth = 600;
+        int newHeight = 300;
+        Image resizedTitleImage = originalTitleImage.getScaledInstance(newWidth, newHeight, Image.SCALE_SMOOTH);
+
+        // Create a new Icon for the title image with new proportions
+        ImageIcon resizedTitleIcon = new ImageIcon(resizedTitleImage);
+        JLabel titleImageLabel = new JLabel(resizedTitleIcon);
+        panel.add(titleImageLabel, gridBag);
+        // LEFT SIDE
+        // Player name -----------------------------------------------------------
+        gridBag.gridx = 0;
+        gridBag.gridy = 1;
+        gridBag.anchor = GridBagConstraints.WEST;
+        panel.add(playerNameLabel, gridBag);
+        gridBag.gridx = 0;
+        gridBag.gridy = 2;
+        panel.add(playerNameTextField, gridBag);
+        // Player cards -----------------------------------------------------------
+        gridBag.gridx = 0;
+        gridBag.gridy = 3;
+        gridBag.anchor = GridBagConstraints.WEST;
+        panel.add(playerCardsLabel, gridBag);
+        gridBag.gridx = 0;
+        gridBag.gridy = 4;
+        panel.add(playerCardsTextField, gridBag);
+        // Player hand -----------------------------------
+        gridBag.gridx = 0;
+        gridBag.gridy = 5;
+        panel.add(playerHandLabel, gridBag);
+        gridBag.gridx = 0;
+        gridBag.gridy = 6;
+        panel.add(playerHandTextField, gridBag);
+
+        // Load Button ------------------------------------------
+        gridBag.insets = new Insets(10, 0, 0, 0);
+        gridBag.gridy = 7;
+        gridBag.gridx = 0;
+        gridBag.anchor = GridBagConstraints.WEST;
+        panel.add(loadButton, gridBag);
+
+        // MIDDLE
+        // Calculate Winner Button ---------------------------------
+        gridBag.anchor = GridBagConstraints.CENTER;
+        gridBag.gridy = 2;
+        gridBag.gridx = 1;
+        panel.add(calculateWinnerButton, gridBag);
+        // Winner --------------------------------------------------------------------
+        gridBag.insets = new Insets(10, 0, 0, 0); // Adds padding
+        gridBag.gridy = 3;
+        gridBag.gridx = 1;
+        panel.add(winnerLabel, gridBag);
+        gridBag.gridy = 4;
+        gridBag.gridx = 1;
+        panel.add(winnerTextField, gridBag);
+
+        // High Score --------------------------------------------------------------
+        gridBag.gridy = 5;
+        gridBag.anchor = GridBagConstraints.CENTER;
+        gridBag.gridx = 1;
+        panel.add(highScoreLabel, gridBag);
+        gridBag.gridy = 6;
+        gridBag.anchor = GridBagConstraints.CENTER;
+        gridBag.gridx = 1;
+        panel.add(highScoreTextField, gridBag);
+
+        // RIGHT SIDE
+        // Dealer cards -----------------------------------
+        gridBag.gridx = 2;
+        gridBag.gridy = 3;
+        gridBag.anchor = GridBagConstraints.EAST;
+        panel.add(dealerCardsLabel, gridBag);
+        gridBag.gridx = 2;
+        gridBag.gridy = 4;
+        panel.add(dealerCardsTextField, gridBag);
+        // Dealer hand -----------------------------------
+        gridBag.gridx = 2;
+        gridBag.gridy = 5;
+        panel.add(dealerHandLabel, gridBag);
+        gridBag.gridx = 2;
+        gridBag.gridy = 6;
+        panel.add(dealerHandTextField, gridBag);
+
+        // Save Button ------------------------------------------
+        gridBag.insets = new Insets(10, 0, 0, 0);
+        gridBag.gridy = 7;
+        gridBag.gridx = 2;
+        gridBag.anchor = GridBagConstraints.EAST;
+        panel.add(saveButton, gridBag);
+
+        // Resize the window automatically
+        window.pack();
+
+        // Show the window
+        window.setVisible(true);
+
+    }
+}
